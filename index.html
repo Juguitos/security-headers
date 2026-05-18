@@ -251,13 +251,13 @@
 
 <script>
 const HEADERS = [
-  { name: 'Strict-Transport-Security', short: 'HSTS' },
-  { name: 'Content-Security-Policy',   short: 'CSP'  },
-  { name: 'X-Content-Type-Options',    short: 'XCTO' },
-  { name: 'X-Frame-Options',           short: 'XFO'  },
-  { name: 'Referrer-Policy',           short: 'RP'   },
-  { name: 'Permissions-Policy',        short: 'PP'   },
-  { name: 'X-XSS-Protection',          short: 'XXP'  },
+  { name: 'Strict-Transport-Security', label: 'Strict-Transport<br>Security' },
+  { name: 'Content-Security-Policy',   label: 'Content-Security<br>Policy'   },
+  { name: 'X-Content-Type-Options',    label: 'X-Content-Type<br>Options'    },
+  { name: 'X-Frame-Options',           label: 'X-Frame<br>Options'           },
+  { name: 'Referrer-Policy',           label: 'Referrer<br>Policy'           },
+  { name: 'Permissions-Policy',        label: 'Permissions<br>Policy'        },
+  { name: 'X-XSS-Protection',          label: 'X-XSS<br>Protection'         },
 ];
 
 const PROXY = 'https://corsproxy.io/?';
@@ -345,7 +345,7 @@ async function startScan() {
 /* ── render ───────────────────────────────────── */
 function render() {
   let th = '<tr><th class="col-host">Host</th>';
-  for (const h of HEADERS) th += `<th>${esc(h.name)}</th>`;
+  for (const h of HEADERS) th += `<th title="${esc(h.name)}">${h.label}</th>`;
   th += '<th class="col-score">Score</th></tr>';
   document.getElementById('thead').innerHTML = th;
 
