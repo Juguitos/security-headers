@@ -260,7 +260,8 @@ const HEADERS = [
   { name: 'X-XSS-Protection',          label: 'X-XSS<br>Protection'         },
 ];
 
-const PROXY = 'https://corsproxy.io/?';
+// Deploy worker.js to Cloudflare Workers and paste the URL here
+const WORKER_URL = 'https://YOUR_WORKER.workers.dev';
 let results = [];
 
 /* ── helpers ──────────────────────────────────── */
@@ -291,18 +292,22 @@ function loadFile(e) {
 
 /* ── check one domain ─────────────────────────── */
 async function checkDomain(domain) {
-  const url = PROXY + encodeURIComponent('https://' + domain);
+  const url = WORKER_URL + '?url=' + encodeURIComponent('https://' + domain);
   try {
     const resp = await fetch(url, { signal: AbortSignal.timeout(9000) });
+    const data = await resp.json();
+    if (data.error) return { domain, present: null, corsOrigin: null, error: 'unreachable' };
+
+    const h = data.headers;
     const present = {};
-    for (const h of HEADERS) {
-      present[h.name] = resp.headers.get(h.name) !== null;
+    for (const header of HEADERS) {
+      present[header.name] = header.name.toLowerCase() in h;
     }
-    const corsOrigin = resp.headers.get('Access-Control-Allow-Origin');
+    const corsOrigin = h['access-control-allow-origin'] ?? null;
     return { domain, present, corsOrigin, error: null };
   } catch (err) {
     const label = err.name === 'TimeoutError' ? 'timeout' : 'unreachable';
-    return { domain, present: null, error: label };
+    return { domain, present: null, corsOrigin: null, error: label };
   }
 }
 
