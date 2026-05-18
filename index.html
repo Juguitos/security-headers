@@ -605,6 +605,20 @@ function exportCSV() {
 }
 
 function copyHosts(mode) {
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+
+  function flash(text, ok) {
+    btn.textContent = text;
+    btn.style.color        = ok ? 'var(--ok)'   : 'var(--fail)';
+    btn.style.borderColor  = ok ? 'var(--ok)'   : 'var(--fail)';
+    setTimeout(() => {
+      btn.textContent      = orig;
+      btn.style.color      = '';
+      btn.style.borderColor= '';
+    }, 2000);
+  }
+
   let hosts;
   if (mode === 'xfo') {
     hosts = results.filter(r => !r.error && !r.present['X-Frame-Options']).map(r => r.domain);
@@ -615,15 +629,12 @@ function copyHosts(mode) {
   }
 
   if (!hosts.length) {
-    document.getElementById('status').textContent = 'No matching hosts.';
+    flash('No hay hosts', false);
     return;
   }
 
   navigator.clipboard.writeText(hosts.join(', ')).then(() => {
-    const btn = event.currentTarget;
-    const orig = btn.textContent;
-    btn.textContent = `Copied ${hosts.length} host${hosts.length !== 1 ? 's' : ''}`;
-    setTimeout(() => { btn.textContent = orig; }, 1800);
+    flash(`Copiado — ${hosts.length} host${hosts.length !== 1 ? 's' : ''}`, true);
   });
 }
 </script>
