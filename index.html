@@ -199,6 +199,98 @@
 
     .hidden { display: none !important; }
 
+    /* ── finding card ───────────────────────── */
+    .finding {
+      margin-top: 32px;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--warn);
+    }
+
+    .finding-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-alt);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .finding-title {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .cvss-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cvss-score {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--warn);
+    }
+
+    .cvss-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--warn);
+      background: #fef3c7;
+      padding: 2px 6px;
+    }
+
+    .finding-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .finding-body p {
+      font-size: 12px;
+      line-height: 1.65;
+      color: #333;
+    }
+
+    .finding-meta {
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      color: var(--muted);
+      padding: 8px 10px;
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+    }
+
+    .finding-note {
+      font-size: 11px;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .finding-hosts {
+      font-size: 11px;
+    }
+
+    .finding-hosts strong {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .finding-hosts code {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: var(--fail);
+    }
+
     @media (max-width: 600px) {
       main { padding: 16px; }
       .site-header { padding: 14px 16px; }
@@ -245,6 +337,49 @@
       <button class="btn btn-ghost" onclick="copyHosts('xfo')">Copy clickjacking-vulnerable hosts</button>
       <button class="btn btn-ghost" onclick="copyHosts('cors')">Copy CORS-vulnerable hosts</button>
       <button class="btn btn-ghost" onclick="copyHosts('all')">Copy all incomplete hosts</button>
+    </div>
+
+    <div class="finding hidden" id="cors-finding">
+      <div class="finding-header">
+        <span class="finding-title">CORS Misconfiguration — Cross-Origin Resource Sharing</span>
+        <div class="cvss-wrap">
+          <span class="cvss-score">6.5</span>
+          <span class="cvss-label">Medium</span>
+        </div>
+      </div>
+      <div class="finding-body">
+        <p>
+          Se identificó una configuración insegura de Cross-Origin Resource Sharing (CORS) que podría
+          permitir que sitios externos no autorizados interactúen con recursos de la aplicación desde
+          el navegador de un usuario autenticado.
+        </p>
+        <p>
+          El riesgo aumenta si el servidor refleja dinámicamente el encabezado <code>Origin</code>,
+          permite orígenes comodín o desconocidos, acepta <code>Origin: null</code>, o combina
+          <code>Access-Control-Allow-Credentials: true</code> con orígenes no controlados. En ese
+          escenario, un atacante podría alojar una página maliciosa y, al lograr que un usuario
+          autenticado la visite, intentar leer respuestas sensibles de la aplicación mediante
+          solicitudes cross-origin.
+        </p>
+        <p>
+          OWASP indica que <code>Access-Control-Allow-Origin</code> define qué dominios pueden leer
+          respuestas del servidor y que una mala configuración puede exponer información a orígenes
+          no autorizados.
+        </p>
+        <div class="finding-meta">
+          CVSS v3.0: 6.5 · Media<br>
+          Vector: CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N
+        </div>
+        <p class="finding-note">
+          La severidad puede subir a Alta si se confirma que CORS permite credenciales y expone
+          información sensible de usuarios autenticados (datos personales, tokens, información
+          financiera, sesiones o respuestas administrativas).
+        </p>
+        <div class="finding-hosts">
+          <strong>Hosts afectados</strong>
+          <code id="cors-hosts-list"></code>
+        </div>
+      </div>
     </div>
   </div>
 </main>
@@ -381,6 +516,7 @@ function render() {
   }
 
   renderSummary();
+  renderCORSFinding();
   document.getElementById('results').classList.remove('hidden');
 }
 
@@ -403,6 +539,18 @@ function renderSummary() {
   document.getElementById('summary').innerHTML = cards
     .map(c => `<div class="card"><div class="k">${c.k}</div><div class="v ${c.cls}">${c.v}</div></div>`)
     .join('');
+}
+
+/* ── CORS finding ─────────────────────────────── */
+function renderCORSFinding() {
+  const affected = results.filter(r => !r.error && r.corsOrigin === '*').map(r => r.domain);
+  const el = document.getElementById('cors-finding');
+  if (!affected.length) {
+    el.classList.add('hidden');
+    return;
+  }
+  document.getElementById('cors-hosts-list').textContent = affected.join(', ');
+  el.classList.remove('hidden');
 }
 
 /* ── exports ──────────────────────────────────── */
