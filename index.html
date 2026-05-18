@@ -242,7 +242,8 @@
     <div class="summary" id="summary"></div>
     <div class="action-bar">
       <button class="btn btn-ghost" onclick="exportCSV()">Export CSV</button>
-      <button class="btn btn-ghost" id="copy-btn" onclick="copyHosts('xfo')">Copy clickjacking-vulnerable hosts</button>
+      <button class="btn btn-ghost" onclick="copyHosts('xfo')">Copy clickjacking-vulnerable hosts</button>
+      <button class="btn btn-ghost" onclick="copyHosts('cors')">Copy CORS-vulnerable hosts</button>
       <button class="btn btn-ghost" onclick="copyHosts('all')">Copy all incomplete hosts</button>
     </div>
   </div>
@@ -297,7 +298,8 @@ async function checkDomain(domain) {
     for (const h of HEADERS) {
       present[h.name] = resp.headers.get(h.name) !== null;
     }
-    return { domain, present, error: null };
+    const corsOrigin = resp.headers.get('Access-Control-Allow-Origin');
+    return { domain, present, corsOrigin, error: null };
   } catch (err) {
     const label = err.name === 'TimeoutError' ? 'timeout' : 'unreachable';
     return { domain, present: null, error: label };
@@ -421,6 +423,8 @@ function copyHosts(mode) {
   let hosts;
   if (mode === 'xfo') {
     hosts = results.filter(r => !r.error && !r.present['X-Frame-Options']).map(r => r.domain);
+  } else if (mode === 'cors') {
+    hosts = results.filter(r => !r.error && r.corsOrigin === '*').map(r => r.domain);
   } else {
     hosts = results.filter(r => !r.error && HEADERS.some(h => !r.present[h.name])).map(r => r.domain);
   }
