@@ -291,9 +291,133 @@
       color: var(--fail);
     }
 
+    /* ── cors checker ───────────────────────── */
+    .cors-section {
+      border-top: 1px solid var(--border);
+      padding: 32px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .cors-section h2 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .cors-section .sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .cors-input-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .cors-input-row input[type="url"],
+    .cors-input-row input[type="text"] {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-alt);
+      color: var(--text);
+      padding: 6px 10px;
+      height: 30px;
+      outline: none;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .cors-input-row input:focus { border-color: var(--text); }
+
+    .cors-input-row label {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .cors-result {
+      margin-top: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .cors-result-header {
+      background: var(--bg-alt);
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .verdict {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .verdict-bad  { background: var(--fail-bg); color: var(--fail); }
+    .verdict-warn { background: #fef3c7;        color: var(--warn); }
+    .verdict-ok   { background: var(--ok-bg);   color: var(--ok);   }
+
+    .cors-rows { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+
+    .cors-row {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+
+    .cors-row .hkey {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      min-width: 260px;
+    }
+
+    .cors-row .hval {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    .cors-row .hval.bad  { color: var(--fail); font-weight: 700; }
+    .cors-row .hval.warn { color: var(--warn); font-weight: 600; }
+    .cors-row .hval.ok   { color: var(--ok);   }
+    .cors-row .hval.none { color: var(--muted); font-style: italic; }
+
+    .cors-summary {
+      margin-top: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-alt);
+      line-height: 1.6;
+    }
+
     @media (max-width: 600px) {
       main { padding: 16px; }
       .site-header { padding: 14px 16px; }
+      .cors-section { padding: 16px; }
     }
   </style>
 </head>
@@ -395,6 +519,33 @@
     </div>
   </div>
 </main>
+
+<!-- ── CORS Validator ─────────────────────────────── -->
+<section class="cors-section">
+  <h2>CORS Validator</h2>
+  <p class="sub">Valida rutas específicas — soporta paths completos como <code>https://test.com/admin</code></p>
+
+  <div class="cors-input-row">
+    <label>
+      URL objetivo
+      <input type="url" id="cors-url" placeholder="https://test.com/api/users">
+    </label>
+    <label>
+      Origin a inyectar
+      <input type="text" id="cors-origin" placeholder="https://evil.com" value="https://evil.com">
+    </label>
+    <button class="btn" id="cors-btn" onclick="checkCORS()">Validar</button>
+  </div>
+
+  <div id="cors-result" class="cors-result hidden">
+    <div class="cors-result-header">
+      <span id="cors-result-url"></span>
+      <span class="verdict" id="cors-verdict"></span>
+    </div>
+    <div class="cors-rows" id="cors-rows"></div>
+    <div class="cors-summary" id="cors-summary"></div>
+  </div>
+</section>
 
 <script>
 const HEADERS = [
@@ -636,6 +787,125 @@ function copyHosts(mode) {
   navigator.clipboard.writeText(hosts.join(', ')).then(() => {
     flash(`Copiado — ${hosts.length} host${hosts.length !== 1 ? 's' : ''}`, true);
   });
+}
+
+/* ── CORS Validator ───────────────────────────────── */
+async function checkCORS() {
+  const urlVal    = document.getElementById('cors-url').value.trim();
+  const originVal = document.getElementById('cors-origin').value.trim() || 'https://evil.com';
+  const btn       = document.getElementById('cors-btn');
+
+  if (!urlVal) {
+    document.getElementById('cors-url').focus();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Validando…';
+  document.getElementById('cors-result').classList.add('hidden');
+
+  const apiUrl = WORKER_URL
+    + '?cors=1'
+    + '&url='    + encodeURIComponent(urlVal)
+    + '&origin=' + encodeURIComponent(originVal);
+
+  try {
+    const resp = await fetch(apiUrl, { signal: AbortSignal.timeout(9000) });
+    const data = await resp.json();
+
+    if (data.error) {
+      renderCORSResult(urlVal, null, originVal, data.error);
+    } else {
+      renderCORSResult(urlVal, data, originVal, null);
+    }
+  } catch (e) {
+    renderCORSResult(urlVal, null, originVal, e.name === 'TimeoutError' ? 'timeout' : 'unreachable');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Validar';
+}
+
+function renderCORSResult(url, data, originSent, error) {
+  const el      = document.getElementById('cors-result');
+  const rowsEl  = document.getElementById('cors-rows');
+  const summEl  = document.getElementById('cors-summary');
+  const verdEl  = document.getElementById('cors-verdict');
+  const urlEl   = document.getElementById('cors-result-url');
+
+  urlEl.textContent = url;
+
+  if (error) {
+    verdEl.className = 'verdict verdict-warn';
+    verdEl.textContent = error;
+    rowsEl.innerHTML = '';
+    summEl.textContent = '';
+    el.classList.remove('hidden');
+    return;
+  }
+
+  const h    = data.headers;
+  const acao = h['access-control-allow-origin']      ?? null;
+  const acac = h['access-control-allow-credentials'] ?? null;
+  const acam = h['access-control-allow-methods']     ?? null;
+  const acah = h['access-control-allow-headers']     ?? null;
+  const vary = h['vary']                              ?? null;
+
+  // Verdict logic
+  const reflectsOrigin = acao === originSent;
+  const isWildcard     = acao === '*';
+  const isNull         = acao === 'null';
+  const hasCredentials = acac === 'true';
+
+  let verdict, verdictCls, summary;
+
+  if (isWildcard) {
+    verdict    = 'Vulnerable — Wildcard';
+    verdictCls = 'verdict-bad';
+    summary    = `El servidor responde con <b>Access-Control-Allow-Origin: *</b> — cualquier origen puede leer la respuesta. CVSS 6.5 (Media). Puede escalar a Alta si la aplicación expone datos sensibles.`;
+  } else if (isNull) {
+    verdict    = 'Vulnerable — Null Origin';
+    verdictCls = 'verdict-bad';
+    summary    = `El servidor acepta <b>Origin: null</b>. Un atacante puede usar iframes sandboxed o redirecciones para generar un origen null y leer la respuesta. CVSS 6.5 (Media).`;
+  } else if (reflectsOrigin) {
+    verdict    = hasCredentials ? 'Crítico — Refleja + Credenciales' : 'Vulnerable — Refleja Origin';
+    verdictCls = 'verdict-bad';
+    summary    = hasCredentials
+      ? `El servidor refleja el Origin enviado <b>y</b> permite credenciales (<code>Access-Control-Allow-Credentials: true</code>). Un atacante autenticado puede leer respuestas con cookies/tokens de sesión. CVSS 8.1 (Alta).`
+      : `El servidor refleja dinámicamente el Origin enviado. Cualquier dominio puede leer la respuesta. CVSS 6.5 (Media). Si se agrega <code>Allow-Credentials: true</code>, escala a Alta.`;
+  } else if (acao === null) {
+    verdict    = 'No expuesto';
+    verdictCls = 'verdict-ok';
+    summary    = `El servidor no retorna <b>Access-Control-Allow-Origin</b> para este origin. El browser bloqueará lecturas cross-origin. Sin hallazgo.`;
+  } else {
+    verdict    = 'Restringido';
+    verdictCls = 'verdict-ok';
+    summary    = `El servidor permite únicamente <b>${esc(acao)}</b>. El origin inyectado (<code>${esc(originSent)}</code>) no está permitido. Sin hallazgo para este origin.`;
+  }
+
+  verdEl.className = `verdict ${verdictCls}`;
+  verdEl.textContent = verdict;
+
+  const rows = [
+    { key: 'Access-Control-Allow-Origin',      val: acao, bad: isWildcard || reflectsOrigin || isNull },
+    { key: 'Access-Control-Allow-Credentials', val: acac, bad: acac === 'true' },
+    { key: 'Access-Control-Allow-Methods',     val: acam, bad: false },
+    { key: 'Access-Control-Allow-Headers',     val: acah, bad: false },
+    { key: 'Vary',                             val: vary, bad: false },
+    { key: 'Origin inyectado',                 val: originSent, bad: false },
+  ];
+
+  rowsEl.innerHTML = rows.map(r => {
+    let cls = r.val === null ? 'none' : r.bad ? 'bad' : 'ok';
+    let display = r.val === null ? '(no presente)' : esc(r.val);
+    return `<div class="cors-row">
+      <span class="hkey">${r.key}</span>
+      <span class="hval ${cls}">${display}</span>
+    </div>`;
+  }).join('');
+
+  summEl.innerHTML = summary;
+  el.classList.remove('hidden');
 }
 </script>
 </body>
