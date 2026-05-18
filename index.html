@@ -860,19 +860,19 @@ function renderCORSResult(url, data, originSent, error) {
   let verdict, verdictCls, summary;
 
   if (isWildcard) {
-    verdict    = 'Vulnerable — Wildcard';
-    verdictCls = 'verdict-bad';
-    summary    = `El servidor responde con <b>Access-Control-Allow-Origin: *</b> — cualquier origen puede leer la respuesta. CVSS 6.5 (Media). Puede escalar a Alta si la aplicación expone datos sensibles.`;
+    verdict    = 'Medio — CVSS 6.5 · Wildcard';
+    verdictCls = 'verdict-warn';
+    summary    = `El servidor responde con <b>Access-Control-Allow-Origin: *</b> — cualquier origen puede leer la respuesta. CVSS 6.5 (Medio). Puede escalar a Alto si la aplicación expone datos sensibles.`;
   } else if (isNull) {
-    verdict    = 'Vulnerable — Null Origin';
-    verdictCls = 'verdict-bad';
-    summary    = `El servidor acepta <b>Origin: null</b>. Un atacante puede usar iframes sandboxed o redirecciones para generar un origen null y leer la respuesta. CVSS 6.5 (Media).`;
+    verdict    = 'Medio — CVSS 6.5 · Null Origin';
+    verdictCls = 'verdict-warn';
+    summary    = `El servidor acepta <b>Origin: null</b>. Un atacante puede usar iframes sandboxed o redirecciones para generar un origen null y leer la respuesta. CVSS 6.5 (Medio).`;
   } else if (reflectsOrigin) {
-    verdict    = hasCredentials ? 'Crítico — Refleja + Credenciales' : 'Vulnerable — Refleja Origin';
-    verdictCls = 'verdict-bad';
+    verdict    = hasCredentials ? 'Alto — CVSS 8.1 · Refleja + Credenciales' : 'Medio — CVSS 6.5 · Refleja Origin';
+    verdictCls = hasCredentials ? 'verdict-bad' : 'verdict-warn';
     summary    = hasCredentials
-      ? `El servidor refleja el Origin enviado <b>y</b> permite credenciales (<code>Access-Control-Allow-Credentials: true</code>). Un atacante autenticado puede leer respuestas con cookies/tokens de sesión. CVSS 8.1 (Alta).`
-      : `El servidor refleja dinámicamente el Origin enviado. Cualquier dominio puede leer la respuesta. CVSS 6.5 (Media). Si se agrega <code>Allow-Credentials: true</code>, escala a Alta.`;
+      ? `El servidor refleja el Origin enviado <b>y</b> permite credenciales (<code>Access-Control-Allow-Credentials: true</code>). Un atacante autenticado puede leer respuestas con cookies/tokens de sesión. CVSS 8.1 (Alto).`
+      : `El servidor refleja dinámicamente el Origin enviado. Cualquier dominio puede leer la respuesta. CVSS 6.5 (Medio). Si se agrega <code>Allow-Credentials: true</code>, escala a Alto.`;
   } else if (acao === null) {
     verdict    = 'No expuesto';
     verdictCls = 'verdict-ok';
