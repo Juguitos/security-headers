@@ -379,6 +379,18 @@
           <strong>Hosts afectados</strong>
           <code id="cors-hosts-list"></code>
         </div>
+        <div class="table-wrap" id="cors-table-wrap">
+          <table id="cors-table">
+            <thead>
+              <tr>
+                <th>Host</th>
+                <th>Access-Control-Allow-Origin</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="cors-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -543,13 +555,33 @@ function renderSummary() {
 
 /* ── CORS finding ─────────────────────────────── */
 function renderCORSFinding() {
-  const affected = results.filter(r => !r.error && r.corsOrigin === '*').map(r => r.domain);
+  const corsResults = results.filter(r => !r.error && r.corsOrigin !== null);
+  const affected    = corsResults.filter(r => r.corsOrigin === '*').map(r => r.domain);
   const el = document.getElementById('cors-finding');
+
   if (!affected.length) {
     el.classList.add('hidden');
     return;
   }
+
   document.getElementById('cors-hosts-list').textContent = affected.join(', ');
+
+  const tbody = document.getElementById('cors-tbody');
+  tbody.innerHTML = corsResults.map(r => {
+    const isBad = r.corsOrigin === '*';
+    const chip  = isBad
+      ? `<span class="chip chip-fail">* — vulnerable</span>`
+      : `<span class="chip chip-ok">${esc(r.corsOrigin)}</span>`;
+    const estado = isBad
+      ? `<span class="chip chip-fail">Inseguro</span>`
+      : `<span class="chip chip-ok">Restringido</span>`;
+    return `<tr>
+      <td class="host">${esc(r.domain)}</td>
+      <td>${chip}</td>
+      <td>${estado}</td>
+    </tr>`;
+  }).join('');
+
   el.classList.remove('hidden');
 }
 
