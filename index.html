@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTTP Security Headers</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #fff;
+      --bg-alt:  #f6f6f6;
+      --border:  #ddd;
+      --text:    #111;
+      --muted:   #888;
+      --ok:      #166534;
+      --ok-bg:   #dcfce7;
+      --fail:    #991b1b;
+      --fail-bg: #fee2e2;
+      --warn:    #854d0e;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    /* ── header ─────────────────────────── */
+    .site-header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+    }
+    .site-header h1 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+    .site-header .by { font-size: 12px; color: var(--muted); }
+
+    /* ── main ───────────────────────────── */
+    main { max-width: 1200px; margin: 0 auto; padding: 32px; }
+
+    /* ── input ──────────────────────────── */
+    .input-block { margin-bottom: 20px; }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: flex-end;
+    }
+
+    textarea {
+      flex: 1;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-alt);
+      color: var(--text);
+      padding: 8px 10px;
+      resize: vertical;
+      min-height: 68px;
+      outline: none;
+    }
+    textarea:focus { border-color: var(--text); }
+
+    .btn {
+      font: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--text);
+      background: var(--text);
+      color: #fff;
+      padding: 0 16px;
+      height: 30px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn:hover { background: #333; border-color: #333; }
+    .btn:disabled { opacity: .35; cursor: not-allowed; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-ghost:hover { background: var(--bg-alt); }
+
+    .file-row {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .file-row input[type="file"] { display: none; }
+    .file-row label { color: var(--text); text-decoration: underline; cursor: pointer; }
+    .file-row label:hover { color: var(--muted); }
+
+    /* ── progress ───────────────────────── */
+    .prog-wrap {
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 10px;
+    }
+    .prog-fill {
+      height: 100%;
+      background: var(--text);
+      width: 0;
+      transition: width .12s;
+    }
+    .status {
+      font-size: 12px;
+      color: var(--muted);
+      min-height: 18px;
+      margin-bottom: 16px;
+    }
+
+    /* ── table ──────────────────────────── */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+    th {
+      background: var(--bg-alt);
+      padding: 6px 10px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg-alt); }
+
+    .host { font-family: 'Courier New', monospace; font-size: 11px; }
+
+    .chip {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 5px;
+      letter-spacing: .02em;
+    }
+    .chip-ok   { background: var(--ok-bg);   color: var(--ok);   }
+    .chip-fail { background: var(--fail-bg); color: var(--fail); }
+    .chip-err  { background: #fef9c3;       color: #713f12;     }
+
+    .score { font-weight: 700; font-size: 12px; }
+    .s-good { color: var(--ok);   }
+    .s-mid  { color: var(--warn); }
+    .s-bad  { color: var(--fail); }
+
+    /* ── summary ────────────────────────── */
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      border-left: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .card {
+      padding: 14px 16px;
+      border-right: 1px solid var(--border);
+      border-top: 1px solid var(--border);
+    }
+    .card .k {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .card .v { font-size: 22px; font-weight: 700; }
+
+    /* ── action bar ─────────────────────── */
+    .action-bar {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 600px) {
+      main { padding: 16px; }
+      .site-header { padding: 14px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>HTTP Security Headers</h1>
+  <span class="by">by @Dqniel78</span>
+</header>
+
+<main>
+  <div class="input-block">
+    <div class="input-row">
+      <textarea id="inp"
+        placeholder="example.com, github.com&#10;or one domain per line"></textarea>
+      <button class="btn" id="scan-btn" onclick="startScan()">Scan</button>
+    </div>
+    <div class="file-row">
+      or <label for="file-inp">upload .txt</label>
+      <input type="file" id="file-inp" accept=".txt" onchange="loadFile(event)">
+      <span id="fname"></span>
+    </div>
+  </div>
+
+  <div class="prog-wrap hidden" id="prog">
+    <div class="prog-fill" id="prog-fill"></div>
+  </div>
+  <div class="status" id="status"></div>
+
+  <div id="results" class="hidden">
+    <div class="table-wrap">
+      <table>
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="summary" id="summary"></div>
+    <div class="action-bar">
+      <button class="btn btn-ghost" onclick="exportCSV()">Export CSV</button>
+      <button class="btn btn-ghost" id="copy-btn" onclick="copyHosts('xfo')">Copy clickjacking-vulnerable hosts</button>
+      <button class="btn btn-ghost" onclick="copyHosts('all')">Copy all incomplete hosts</button>
+    </div>
+  </div>
+</main>
+
+<script>
+const HEADERS = [
+  { name: 'Strict-Transport-Security', short: 'HSTS' },
+  { name: 'Content-Security-Policy',   short: 'CSP'  },
+  { name: 'X-Content-Type-Options',    short: 'XCTO' },
+  { name: 'X-Frame-Options',           short: 'XFO'  },
+  { name: 'Referrer-Policy',           short: 'RP'   },
+  { name: 'Permissions-Policy',        short: 'PP'   },
+  { name: 'X-XSS-Protection',          short: 'XXP'  },
+];
+
+const PROXY = 'https://corsproxy.io/?';
+let results = [];
+
+/* ── helpers ──────────────────────────────────── */
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function parseDomains(raw) {
+  return [...new Set(
+    raw.split(/[\n,]+/)
+       .map(s => s.trim()
+                   .replace(/^https?:\/\//i, '')
+                   .replace(/[/?#].*$/, ''))
+       .filter(s => s && /^[a-zA-Z0-9_.-]/.test(s))
+  )];
+}
+
+/* ── file upload ──────────────────────────────── */
+function loadFile(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  document.getElementById('fname').textContent = f.name;
+  const r = new FileReader();
+  r.onload = ev => { document.getElementById('inp').value = ev.target.result; };
+  r.readAsText(f);
+}
+
+/* ── check one domain ─────────────────────────── */
+async function checkDomain(domain) {
+  const url = PROXY + encodeURIComponent('https://' + domain);
+  try {
+    const resp = await fetch(url, { signal: AbortSignal.timeout(9000) });
+    const present = {};
+    for (const h of HEADERS) {
+      present[h.name] = resp.headers.get(h.name) !== null;
+    }
+    return { domain, present, error: null };
+  } catch (err) {
+    const label = err.name === 'TimeoutError' ? 'timeout' : 'unreachable';
+    return { domain, present: null, error: label };
+  }
+}
+
+/* ── scan ─────────────────────────────────────── */
+async function startScan() {
+  const domains = parseDomains(document.getElementById('inp').value);
+  if (!domains.length) {
+    document.getElementById('status').textContent = 'Enter at least one domain.';
+    return;
+  }
+
+  const btn  = document.getElementById('scan-btn');
+  const fill = document.getElementById('prog-fill');
+  btn.disabled = true;
+  fill.style.width = '0';
+  document.getElementById('prog').classList.remove('hidden');
+  document.getElementById('results').classList.add('hidden');
+  results = [];
+  let done = 0;
+
+  const bump = () => {
+    done++;
+    fill.style.width = (done / domains.length * 100) + '%';
+    document.getElementById('status').textContent =
+      `Scanning ${done} / ${domains.length}…`;
+  };
+
+  for (let i = 0; i < domains.length; i += 5) {
+    const batch = await Promise.all(domains.slice(i, i + 5).map(checkDomain));
+    batch.forEach(r => { results.push(r); bump(); });
+  }
+
+  render();
+  btn.disabled = false;
+  document.getElementById('prog').classList.add('hidden');
+  document.getElementById('status').textContent =
+    `Done — ${domains.length} host${domains.length !== 1 ? 's' : ''} scanned`;
+}
+
+/* ── render ───────────────────────────────────── */
+function render() {
+  let th = '<tr><th>Host</th>';
+  for (const h of HEADERS) th += `<th title="${esc(h.name)}">${h.short}</th>`;
+  th += '<th>Score</th></tr>';
+  document.getElementById('thead').innerHTML = th;
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  for (const r of results) {
+    const tr = document.createElement('tr');
+    let html = `<td class="host">${esc(r.domain)}</td>`;
+
+    if (r.error) {
+      html += `<td colspan="${HEADERS.length}">
+                 <span class="chip chip-err">${r.error}</span>
+               </td><td>—</td>`;
+    } else {
+      let count = 0;
+      for (const h of HEADERS) {
+        const ok = r.present[h.name];
+        if (ok) count++;
+        html += `<td><span class="chip ${ok ? 'chip-ok' : 'chip-fail'}">${ok ? '✓' : '✗'}</span></td>`;
+      }
+      const cls = count === HEADERS.length ? 's-good' : count >= 4 ? 's-mid' : 's-bad';
+      html += `<td><span class="score ${cls}">${count}/${HEADERS.length}</span></td>`;
+    }
+
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  }
+
+  renderSummary();
+  document.getElementById('results').classList.remove('hidden');
+}
+
+/* ── summary ──────────────────────────────────── */
+function renderSummary() {
+  const valid   = results.filter(r => !r.error);
+  const errors  = results.length - valid.length;
+  const miss    = name => valid.filter(r => !r.present[name]).length;
+  const perfect = valid.filter(r => HEADERS.every(h => r.present[h.name])).length;
+
+  const cards = [
+    { k: 'Scanned',           v: results.length,                        cls: '' },
+    { k: 'All headers OK',    v: perfect,                               cls: perfect === valid.length ? 's-good' : 's-bad' },
+    { k: 'No HSTS',           v: miss('Strict-Transport-Security'),     cls: miss('Strict-Transport-Security')  ? 's-bad' : 's-good' },
+    { k: 'No CSP',            v: miss('Content-Security-Policy'),       cls: miss('Content-Security-Policy')    ? 's-bad' : 's-good' },
+    { k: 'Clickjacking risk', v: miss('X-Frame-Options'),               cls: miss('X-Frame-Options')            ? 's-bad' : 's-good' },
+  ];
+  if (errors) cards.push({ k: 'Errors', v: errors, cls: 's-mid' });
+
+  document.getElementById('summary').innerHTML = cards
+    .map(c => `<div class="card"><div class="k">${c.k}</div><div class="v ${c.cls}">${c.v}</div></div>`)
+    .join('');
+}
+
+/* ── exports ──────────────────────────────────── */
+function exportCSV() {
+  const cols = ['Host', ...HEADERS.map(h => h.name), 'Score'];
+  const rows = results.map(r => {
+    if (r.error) return [r.domain, ...HEADERS.map(() => r.error), ''];
+    const s = HEADERS.filter(h => r.present[h.name]).length;
+    return [r.domain, ...HEADERS.map(h => r.present[h.name] ? 'yes' : 'no'), `${s}/${HEADERS.length}`];
+  });
+
+  const csv = [cols, ...rows]
+    .map(row => row.map(c => `"${String(c).replace(/"/g,'""')}"`).join(','))
+    .join('\r\n');
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'security-headers.csv';
+  a.click();
+}
+
+function copyHosts(mode) {
+  let hosts;
+  if (mode === 'xfo') {
+    hosts = results.filter(r => !r.error && !r.present['X-Frame-Options']).map(r => r.domain);
+  } else {
+    hosts = results.filter(r => !r.error && HEADERS.some(h => !r.present[h.name])).map(r => r.domain);
+  }
+
+  if (!hosts.length) {
+    document.getElementById('status').textContent = 'No matching hosts.';
+    return;
+  }
+
+  navigator.clipboard.writeText(hosts.join(', ')).then(() => {
+    const btn = event.currentTarget;
+    const orig = btn.textContent;
+    btn.textContent = `Copied ${hosts.length} host${hosts.length !== 1 ? 's' : ''}`;
+    setTimeout(() => { btn.textContent = orig; }, 1800);
+  });
+}
+</script>
+</body>
+</html>
